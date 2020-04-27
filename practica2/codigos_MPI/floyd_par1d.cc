@@ -11,9 +11,9 @@ using namespace std;
 
 int main (int argc, char *argv[]) {
 
-  MPI_Init(&argc, &argv);
+        MPI_Init(&argc, &argv);
 
-  if (argc != 2) {
+        if (argc != 2) {
 		cerr << "Sintaxis: " << argv[0] << " <archivo de grafo>" << endl;
 		return(-1);
 	}
@@ -21,24 +21,24 @@ int main (int argc, char *argv[]) {
 
 
 	Graph G;
-  int nverts,rank,size;
-  MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-	MPI_Comm_size( MPI_COMM_WORLD, &size );
+        int nverts,rank,size;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+    	MPI_Comm_size( MPI_COMM_WORLD, &size );
 
-  // Read the Graph in process 0
-	if(rank==0) {
-   G.lee(argv[1]);
-   nverts = G.vertices;
-   //G.imprime();
-  }
-  // Broadcast the number of vertices to all processes
-  MPI_Bcast(&nverts,1,MPI_INT, 0, MPI_COMM_WORLD);
+        // Read the Graph in process 0
+	if(rank==0)
+            {G.lee(argv[1]);
+             nverts = G.vertices;
+             //G.imprime();
+            }
+        // Broadcast the number of vertices to all processes
+        MPI_Bcast(&nverts,1,MPI_INT, 0, MPI_COMM_WORLD);
 
-  const int bsize1d= nverts/size,
-            bsize2d= bsize1d*nverts;
+        const int bsize1d= nverts/size,
+                  bsize2d= bsize1d*nverts;
 
 
-  int *A = G.Get_Matrix();
+        int *A = G.Get_Matrix();
 
 	//Process 0 scatters blocks of matrix A
 	int * local_A= new int[bsize2d];
@@ -46,15 +46,15 @@ int main (int argc, char *argv[]) {
 
 
 
-  // Computing the local first and last row indexes
-  const int local_i_start=0;
-  const int local_i_end= bsize1d;
-  // Computing the local first row index for each process
-  const int global_i_start=rank*bsize1d;
+        // Computing the local first and last row indexes
+        const int local_i_start=0;
+        const int local_i_end= bsize1d;
+                // Computing the local first row index for each process
+        const int global_i_start=rank*bsize1d;
 
-  //Vector storing kth row of the global matrix A
-  int *fila_k= new int[nverts];
-  int *tmp;
+        //Vector storing kth row of the global matrix A
+        int *fila_k= new int[nverts];
+        int *tmp;
 
 
 	double t1 = MPI_Wtime();

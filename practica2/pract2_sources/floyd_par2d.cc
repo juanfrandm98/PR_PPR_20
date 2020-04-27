@@ -38,6 +38,7 @@ int main( int argc, char * argv[] ) {
   int *A = G.Get_Matrix();
 
   int bsize1d = nverts / size;
+  int bsize2d =
 
   //////////////////////////////////////////////////////////
   //                                                      //
@@ -74,7 +75,7 @@ int main( int argc, char * argv[] ) {
       int fila_P = i / raiz_P;
       int columna_P = i % raiz_P;
 
-      int comienzo = ( columna_P * tam ) + ( fila_P * tam * tam * raiz_P );
+      comienzo = ( columna_P * tam ) + ( fila_P * tam * tam * raiz_P );
 
       // Se empaqueta el bloque i, donde cada argumento indica:
       //    - A(comienzo)     -> primer elemento a enviar
@@ -84,7 +85,7 @@ int main( int argc, char * argv[] ) {
       //    - tam_buf_envio   -> tamaño del buffer de envio
       //    - &posicion       -> posición del bloque en el buffer
       //    - MPI_COMM_WORLD  -> comunicador por el que se envía
-      MPI_Pack( &A[comienzo], 1, MPI_BLOQUE, buf_envio, tam_buf_envio,
+      MPI_Pack( A( comienzo ), 1, MPI_BLOQUE, buf_envio, tam_buf_envio,
                 &posicion, MPI_COMM_WORLD );
 
     }
@@ -92,38 +93,6 @@ int main( int argc, char * argv[] ) {
   }
 
   // Creación del buffer de recepción
-  int *buf_recep = new int[tam * tam];
-  int tam_buf_recep = sizeof( int ) * tam * tam;
-
-  cout << "P" << rank << " LISTO PARA SCATTER" << endl;
-
-  // Distribución de la matriz entre los procesos, donde cada argumento indica:
-  //    - buf_envio       -> datos sobre los que se aplica el scatter
-  //    - tam_buf_recep   -> número de datos que llegan a cada proceso
-  //    - MPI_PACKED      -> tipo de dato enviado
-  //    - buf_recep       -> donde se almacenan los datos recibidos
-  //    - tam * tam       -> número de datos que recibe cada proceso
-  //    - MPI_INT         -> tipo de dato a recibir
-  //    - 0               -> identificador del proceso que reparte los datos
-  //    - MPI_COMM_WORLD  -> comunicador por el que se envia
-  MPI_Scatter( buf_envio, tam_buf_recep, MPI_PACKED, buf_recep, tam * tam,
-               MPI_INT, 0, MPI_COMM_WORLD );
-
-  cout << "P" << rank << " SCATTER HECHO" << endl;
-
-  string salida = "Proceso " + to_string(rank) + " SALTO ";
-  for( int i = 0; i < tam; i++ ) {
-    for( int j = 0; j < tam; j++ ) {
-      salida += buf_recep[i+j] + " TAB ";
-      cout << "P" << rank << " i-j -> " << i << "-" << j << endl;
-    }
-    salida += " SALTO ";
-  }
-
-  cout << salida << endl;
-
-  MPI_Barrier( MPI_COMM_WORLD );
-
-  MPI_Finalize();
+  int *buf
 
 }
