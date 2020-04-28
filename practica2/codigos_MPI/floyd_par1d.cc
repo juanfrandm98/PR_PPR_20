@@ -29,7 +29,8 @@ int main (int argc, char *argv[]) {
 	if(rank==0)
             {G.lee(argv[1]);
              nverts = G.vertices;
-             //G.imprime();
+             G.imprime();
+             cout << endl << endl;
             }
         // Broadcast the number of vertices to all processes
         MPI_Bcast(&nverts,1,MPI_INT, 0, MPI_COMM_WORLD);
@@ -43,6 +44,8 @@ int main (int argc, char *argv[]) {
 	//Process 0 scatters blocks of matrix A
 	int * local_A= new int[bsize2d];
 	MPI_Scatter(A,bsize2d,MPI_INT,local_A,bsize2d,MPI_INT, 0, MPI_COMM_WORLD);
+
+
 
 
 

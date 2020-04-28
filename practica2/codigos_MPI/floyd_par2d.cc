@@ -1,3 +1,17 @@
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+//        FLOYD_PAR2D                                                         //
+//                                                                            //
+//    PROGRAMA QUE EMPLEA EL ALGORITMO DE FLOYD DISTRIBUYENDO LA MATRIZ DE    //
+//    ADYACENCIAS ENTRE VARIOS PROCESOS UTILIZANDO MPI_INT VERSIÓN QUE        //
+//    DIVIDE LA MATRIZ USANDO SUBMATRICES 2D                                  //
+//                                                                            //
+//    JUAN FRANCISCO DÍAZ MORENO                                              //
+//    PROGRAMACIÓN PARALELA                                                   //
+//    MAYO DE 2020                                                            //
+//                                                                            //
+////////////////////////////////////////////////////////////////////////////////
+
 #include <iostream>
 #include <fstream>
 #include <string.h>
@@ -10,11 +24,13 @@ using namespace std;
 
 int main( int argc, char * argv[] ) {
 
+  // Inicializamos MPI
   MPI_Init( &argc, &argv );
 
   Graph G;
   int nverts, rank, size;
 
+  // Obtenemos el número de procesos y el ID de cada uno
   MPI_Comm_rank( MPI_COMM_WORLD, &rank );
   MPI_Comm_size( MPI_COMM_WORLD, &size );
 
@@ -30,14 +46,14 @@ int main( int argc, char * argv[] ) {
     G.lee( argv[1] );
     nverts = G.vertices;
 
+    // Imprimimos la matriz inicial
+    cout << "Grafo de entrada:" << endl;
+    G.imprime();
+
   }
 
   // Se realiza un Broadcast del tamaño de la matriz grande
   MPI_Bcast( &nverts, 1, MPI_INT, 0, MPI_COMM_WORLD );
-
-  int *A = G.Get_Matrix();
-
-  int bsize1d = nverts / size;
 
   //////////////////////////////////////////////////////////
   //                                                      //
@@ -57,6 +73,9 @@ int main( int argc, char * argv[] ) {
   int tam_buf_envio = sizeof( int ) * nverts * nverts;
 
   if( rank == 0 ) {
+
+    // Obtenemos un vector a partir del grafo de entrada
+    int *A = G.Get_Matrix();
 
     // Definición del tipo bloque cuadrado, donde cada argumento indica
     //    - tam        -> número de bloques
@@ -95,8 +114,6 @@ int main( int argc, char * argv[] ) {
   int *buf_recep = new int[tam * tam];
   int tam_buf_recep = sizeof( int ) * tam * tam;
 
-  cout << "P" << rank << " LISTO PARA SCATTER" << endl;
-
   // Distribución de la matriz entre los procesos, donde cada argumento indica:
   //    - buf_envio       -> datos sobre los que se aplica el scatter
   //    - tam_buf_recep   -> número de datos que llegan a cada proceso
@@ -109,21 +126,83 @@ int main( int argc, char * argv[] ) {
   MPI_Scatter( buf_envio, tam_buf_recep, MPI_PACKED, buf_recep, tam * tam,
                MPI_INT, 0, MPI_COMM_WORLD );
 
-  cout << "P" << rank << " SCATTER HECHO" << endl;
+  //////////////////////////////////////////////////////////
+  //                                                      //
+  //    FASE 2                                            //
+  //    CREACIÓN DE LOS COMUNICADORES VERTICAL Y          //
+  //    HORIZONTAL                                        //
+  //                                                      //
+  //////////////////////////////////////////////////////////
 
-  string salida = "Proceso " + to_string(rank) + " SALTO ";
-  for( int i = 0; i < tam; i++ ) {
-    for( int j = 0; j < tam; j++ ) {
-      salida += buf_recep[i+j] + " TAB ";
-      cout << "P" << rank << " i-j -> " << i << "-" << j << endl;
+  //////////////////////////////////////////////////////////
+  //                                                      //
+  //    FASE 1                                            //
+  //    IMPLEMENTACIÓN DEL ALGORITMO DE FLOYD_PAR2D       //
+  //                                                      //
+  //////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////
+  //                                                      //
+  //    FASE 4                                            //
+  //    RECOPILACIÓN FINAL DE LA MATRIZ RESULTADO         //
+  //                                                      //
+  //////////////////////////////////////////////////////////
+
+  // Reunimos todas las submatrices en el proceso 0, donde cada argumento indica:
+  //    - buf_recep       -> datos que envía cada proceso
+  //    - tam * tam       -> número de datos que envía cada proceso
+  //    - MPI_INT         -> tipo de dato que se envía
+  //    - buf_envio       -> donde se almacenan todos los datos recibidos
+  //    - tam_buf_recep   -> tamaño de los datos que se recibe de cada proceso
+  //    - MPI_PACKED      -> Tipo de dato que se recibe
+  //    - 0               -> identificador del proceso que recibe los envíos
+  //    - MPI_COMM_WORLD  -> comunicador por el que se envían los datos
+  MPI_Gather( buf_recep, tam * tam, MPI_INT, buf_envio, tam_buf_recep,
+              MPI_PACKED, 0, MPI_COMM_WORLD );
+
+  if( rank == 0 ) {
+
+    // Creamos la matriz donde se almacenarán los datos
+    int *B = new int[nverts * nverts];
+
+    for( int i = 0, posicion = 0; i < size; i++ ) {
+
+      // Cálculo de la posición donde se posicionará cada submatriz
+      int fila_P = i / raiz_P;
+      int columna_P = i % raiz_P;
+
+      int comienzo = ( columna_P * tam ) + ( fila_P * tam * tam * raiz_P );
+
+      // Desempaquetamos los datos enviados, donde cada argumento indica:
+      //    - buf_envio       -> datos que se desempaquetan
+      //    - tam_buf_envio   -> tamaño de los datos que se desempaquetan
+      //    - posicion        -> posición del bloque en el buffer
+      //    - B               -> donde se colocan los datos desempaquetados
+      //    - 1               -> número de elementos que se desempaquetan
+      //    - MPI_BLOQUE      -> elemento que se desempaqueta
+      //    - MPI_COMM_WORLD  -> comunicador por el que se ha recibido
+      MPI_Unpack( buf_envio, tam_buf_envio, &posicion, &B[comienzo], 1,
+                  MPI_BLOQUE, MPI_COMM_WORLD );
+
     }
-    salida += " SALTO ";
+
+    // Mostramos el grafo resultado para hacer las comprobaciones
+    cout << endl << endl << "Grafo de salida:" << endl;
+
+    for( int i = 0; i < nverts; i++ ) {
+      cout << "A[" << i << ",*]= ";
+      for( int j = 0; j < nverts; j++ ) {
+        int num = B[i * nverts + j];
+
+        if( num == INF ) cout << "INF ";  // Para que el resultado salga con la
+        else cout << num << " ";          // misma sintaxis que la matriz inicial,
+      }                                   // mostramos 1000000 como INF
+      cout << endl;
+    }
+
   }
 
-  cout << salida << endl;
-
-  MPI_Barrier( MPI_COMM_WORLD );
-
+  // Finalización de MPI
   MPI_Finalize();
 
 }
