@@ -134,12 +134,36 @@ int main( int argc, char * argv[] ) {
   //                                                      //
   //////////////////////////////////////////////////////////
 
+  // Obtenemos los colores para cada comunicador
+  int color_horizontal = rank / raiz_P;
+  int color_vertical   = rank % raiz_P;
+
+  // Creamos los comunicadores
+  MPI_Comm comm_vertical, comm_horizontal;
+
+  MPI_Comm_split( MPI_COMM_WORLD, color_horizontal, rank, &comm_horizontal );
+  MPI_Comm_split( MPI_COMM_WORLD, color_vertical, rank, &comm_vertical );
+
   //////////////////////////////////////////////////////////
   //                                                      //
-  //    FASE 1                                            //
+  //    FASE 3                                            //
   //    IMPLEMENTACIÓN DEL ALGORITMO DE FLOYD_PAR2D       //
   //                                                      //
   //////////////////////////////////////////////////////////
+
+  // Sincronizamos las hebras y tomamos la medida de tiempo inicial
+  MPI_Barrier( MPI_COMM_WORLD );
+  double tini = MPI_Wtime();
+
+  for( int k = 0; k < nverts; k++ ) {
+
+    
+
+  }
+
+  // Sincronizamos las hebras y tomamos la medida de tiempo final
+  MPI_Barrier( MPI_COMM_WORLD );
+  double tfin = MPI_WTime();
 
   //////////////////////////////////////////////////////////
   //                                                      //
