@@ -66,7 +66,8 @@ int main( int argc, char * argv[] ) {
 
   // Calculamos el número de elementos que tendrá cada submatriz (bloque)
   int raiz_P = sqrt( size );
-  int tam = nverts / raiz_P;
+  int tam = nverts / raiz_P;    // Número de elementos por fila del bloque
+  int bsize1d = nverts / size;  // Número de elementos totales del bloque
 
   // Creación del buffer de envío para almacenar los datos empaquetados
   int *buf_envio = new int[nverts * nverts];
@@ -111,8 +112,8 @@ int main( int argc, char * argv[] ) {
   }
 
   // Creación del buffer de recepción
-  int *buf_recep = new int[tam * tam];
-  int tam_buf_recep = sizeof( int ) * tam * tam;
+  int *buf_recep = new int[bsize1d];
+  int tam_buf_recep = sizeof( int ) * bsize1d;
 
   // Distribución de la matriz entre los procesos, donde cada argumento indica:
   //    - buf_envio       -> datos sobre los que se aplica el scatter
@@ -123,7 +124,7 @@ int main( int argc, char * argv[] ) {
   //    - MPI_INT         -> tipo de dato a recibir
   //    - 0               -> identificador del proceso que reparte los datos
   //    - MPI_COMM_WORLD  -> comunicador por el que se envia
-  MPI_Scatter( buf_envio, tam_buf_recep, MPI_PACKED, buf_recep, tam * tam,
+  MPI_Scatter( buf_envio, tam_buf_recep, MPI_PACKED, buf_recep, bsize1d,
                MPI_INT, 0, MPI_COMM_WORLD );
 
   //////////////////////////////////////////////////////////
@@ -144,6 +145,18 @@ int main( int argc, char * argv[] ) {
   MPI_Comm_split( MPI_COMM_WORLD, color_horizontal, rank, &comm_horizontal );
   MPI_Comm_split( MPI_COMM_WORLD, color_vertical, rank, &comm_vertical );
 
+  // Obtenemos los identificadores de cada proceso en cada comunicador
+  int rank_horizontal, rank_vertical;
+
+  MPI_Comm_rank( comm_horizontal, &rank_horizontal );
+  MPI_Comm_rank( comm_vertical, &rank_vertical );
+
+  if( rank == 0 )
+    cout << endl << endl;
+    
+  cout << "Soy el Proceso " << rank << ", en el comunicador horizontal soy el " <<
+          rank_horizontal << "º, y en el vertical, el " << rank_vertical << "º" << endl;
+
   //////////////////////////////////////////////////////////
   //                                                      //
   //    FASE 3                                            //
@@ -151,19 +164,72 @@ int main( int argc, char * argv[] ) {
   //                                                      //
   //////////////////////////////////////////////////////////
 
-  // Sincronizamos las hebras y tomamos la medida de tiempo inicial
-  MPI_Barrier( MPI_COMM_WORLD );
-  double tini = MPI_Wtime();
-
-  for( int k = 0; k < nverts; k++ ) {
-
-    
-
-  }
-
-  // Sincronizamos las hebras y tomamos la medida de tiempo final
-  MPI_Barrier( MPI_COMM_WORLD );
-  double tfin = MPI_WTime();
+  // // Calculamos los i locales
+  // const int local_i_start = 0;
+  // const int local_i_end   = bsize1d;
+  //
+  // // Y el i global de cada proceso
+  // const int global_i_start = rank * bsize1d;
+  //
+  // // Vectores para almacenar las filas y columnas k
+  // int *fila_k    = new int[nverts];
+  // int *columna_k = new int[nverts];
+  // int *fila_tmp, *columna_tmp;
+  //
+  // // Sincronizamos las hebras y tomamos la medida de tiempo inicial
+  // MPI_Barrier( MPI_COMM_WORLD );
+  // double tini = MPI_Wtime();
+  //
+  // // Bucle principal del algoritmo
+  // for( int k = 0; k < nverts; k++ ) {
+  //
+  //   // Calculamos la fila y la columna k
+  //   int row_k_process = k / bsize1d;
+  //   int col_k_process = k % bsize1d;
+  //
+  //   // Si este proceso contiene parte de la fila k
+  //   if( rank == row_k_process ) {
+  //     const int local_k = k % tam;
+  //     fila_tmp = fila_k;
+  //     fila_k = &( buf_recep[local_k * nverts] );
+  //   }
+  //
+  //   // Broadcast de la fila k, donde cada parámetro indica:
+  //   //    - fila_k            -> buffer de entrada y salida
+  //   //    - tam               -> número de elementos que se envían
+  //   //    - MPI_INT           -> tipo de dato que se envía
+  //   //    - rok_k_process     -> identificador del comunicador que envía
+  //   //    - comm_horizontal   -> comunicador por el que se envía
+  //   MPI_Bcast( fila_k, tam, MPI_INT, row_k_process, comm_horizontal );
+  //
+  //   // Si este proceso contiene parte de la columna k
+  //   if( rank == col_k_process ) {
+  //     const int local_k = k % tam;
+  //     columna_tmp = columna_k;
+  //
+  //     for( int i = 0; i < tam; i++ ) {
+  //       int local_index = i * local_k;
+  //       columna_k[i] = buf_recep[local_index];
+  //     }
+  //   }
+  //
+  //   // Broadcast de la columna k
+  //   MPI_Bcast( columna_k, tam, MPI_INT, col_k_process, comm_vertical );
+  //
+  //   // Actualizamos la submatriz de cada proceso
+  //   for( int i = local_i_start; i < local_i_end; i++ ) {
+  //
+  //     int global_i = i + rank_horizontal;
+  //
+  //     for( int j = )
+  //
+  //   }
+  //
+  // }
+  //
+  // // Sincronizamos las hebras y tomamos la medida de tiempo final
+  // MPI_Barrier( MPI_COMM_WORLD );
+  // double tfin = MPI_WTime();
 
   //////////////////////////////////////////////////////////
   //                                                      //
@@ -181,7 +247,7 @@ int main( int argc, char * argv[] ) {
   //    - MPI_PACKED      -> Tipo de dato que se recibe
   //    - 0               -> identificador del proceso que recibe los envíos
   //    - MPI_COMM_WORLD  -> comunicador por el que se envían los datos
-  MPI_Gather( buf_recep, tam * tam, MPI_INT, buf_envio, tam_buf_recep,
+  MPI_Gather( buf_recep, bsize1d, MPI_INT, buf_envio, tam_buf_recep,
               MPI_PACKED, 0, MPI_COMM_WORLD );
 
   if( rank == 0 ) {
