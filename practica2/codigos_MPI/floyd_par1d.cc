@@ -82,6 +82,8 @@ int main (int argc, char *argv[]) {
                      if (global_i!=j && global_i!=k && j!=k)
                        { int local_ij=i_nverts + j;
                          int suma_ikj=local_A[local_ik] + fila_k[j];
+                         //cout << "P" << rank << "[" << global_i << "," << j << "]="
+                          //    << local_A[local_ij] << endl;
 		         local_A[local_ij] = min(local_A[local_ij],suma_ikj);
                        }
             }

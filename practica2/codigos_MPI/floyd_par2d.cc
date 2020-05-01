@@ -68,6 +68,7 @@ int main( int argc, char * argv[] ) {
   int raiz_P = sqrt( size );
   int tam = nverts / raiz_P;    // Número de elementos por fila del bloque
   int bsize1d = nverts / size;  // Número de elementos totales del bloque
+  int bsize2d = tam * tam;
 
   // Creación del buffer de envío para almacenar los datos empaquetados
   int *buf_envio = new int[nverts * nverts];
@@ -94,7 +95,7 @@ int main( int argc, char * argv[] ) {
       int fila_P = i / raiz_P;
       int columna_P = i % raiz_P;
 
-      int comienzo = ( columna_P * tam ) + ( fila_P * tam * tam * raiz_P );
+      int comienzo = ( columna_P * tam ) + ( fila_P * bsize2d * raiz_P );
 
       // Se empaqueta el bloque i, donde cada argumento indica:
       //    - A(comienzo)     -> primer elemento a enviar
@@ -106,14 +107,14 @@ int main( int argc, char * argv[] ) {
       //    - MPI_COMM_WORLD  -> comunicador por el que se envía
       MPI_Pack( &A[comienzo], 1, MPI_BLOQUE, buf_envio, tam_buf_envio,
                 &posicion, MPI_COMM_WORLD );
-
     }
 
   }
 
   // Creación del buffer de recepción
-  int *buf_recep = new int[bsize1d];
-  int tam_buf_recep = sizeof( int ) * bsize1d;
+  int *buf_recep = new int[bsize2d];
+  //int tam_buf_recep = sizeof( int ) * bsize1d;
+  int tam_buf_recep = sizeof( int ) * bsize2d;
 
   // Distribución de la matriz entre los procesos, donde cada argumento indica:
   //    - buf_envio       -> datos sobre los que se aplica el scatter
@@ -124,8 +125,11 @@ int main( int argc, char * argv[] ) {
   //    - MPI_INT         -> tipo de dato a recibir
   //    - 0               -> identificador del proceso que reparte los datos
   //    - MPI_COMM_WORLD  -> comunicador por el que se envia
-  MPI_Scatter( buf_envio, tam_buf_recep, MPI_PACKED, buf_recep, bsize1d,
+  MPI_Scatter( buf_envio, tam_buf_recep, MPI_PACKED, buf_recep, bsize2d,
                MPI_INT, 0, MPI_COMM_WORLD );
+
+  for( int i = 0; i < tam*tam; i++ )
+    cout << "P"<<rank<<"["<<i<<"]="<<buf_recep[i]<<endl;
 
   //////////////////////////////////////////////////////////
   //                                                      //
@@ -173,8 +177,10 @@ int main( int argc, char * argv[] ) {
   const int global_i_start = rank * bsize1d;
 
   // Vectores para almacenar las filas y columnas k
-  int *fila_k    = new int[nverts];
-  int *columna_k = new int[nverts];
+  //int *fila_k    = new int[nverts];
+  //int *columna_k = new int[nverts];
+  int fila_k[tam];
+  int columna_k[nverts];
   int *fila_tmp, *columna_tmp;
 
   // Sincronizamos las hebras y tomamos la medida de tiempo inicial
@@ -192,7 +198,11 @@ int main( int argc, char * argv[] ) {
     if( rank == row_k_process ) {
       const int local_k = k % tam;
       fila_tmp = fila_k;
-      fila_k = &( buf_recep[local_k * nverts] );
+      //fila_k = &( buf_recep[local_k * nverts] );
+      for( int i = 0; i < tam; i++ ) {
+        int local_index = i * 1 + local_k;
+        fila_k[i] = buf_recep[local_index];
+      }
     }
 
     // Broadcast de la fila k, donde cada parámetro indica:
@@ -228,10 +238,7 @@ int main( int argc, char * argv[] ) {
 
         if( global_i != global_j && global_i != k && global_j != k ) {
           int local_ij = i * tam + j;
-          int suma_ikj = columna_k[global_i] + fila_k[global_j];
-          cout << "P" << rank << "[" << global_i << "," << global_j << "," << k
-               << "] -> buf_recep[" << local_ij << "]=" << buf_recep[local_ij]
-               << " - suma_ijk = " << suma_ikj << endl;
+          int suma_ikj = columna_k[i] + fila_k[j];
           buf_recep[local_ij] = min( buf_recep[local_ij], suma_ikj );
         }
 
@@ -261,7 +268,7 @@ int main( int argc, char * argv[] ) {
   //    - MPI_PACKED      -> Tipo de dato que se recibe
   //    - 0               -> identificador del proceso que recibe los envíos
   //    - MPI_COMM_WORLD  -> comunicador por el que se envían los datos
-  MPI_Gather( buf_recep, bsize1d, MPI_INT, buf_envio, tam_buf_recep,
+  MPI_Gather( buf_recep, bsize2d, MPI_INT, buf_envio, tam_buf_recep,
               MPI_PACKED, 0, MPI_COMM_WORLD );
 
   if( rank == 0 ) {
