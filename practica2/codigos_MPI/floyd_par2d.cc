@@ -51,7 +51,8 @@ int main( int argc, char * argv[] ) {
     G.imprime();
 
   }
-
+  if( rank == 0 )
+    cout << "B1" << endl;
   // Se realiza un Broadcast del tamaño de la matriz grande
   MPI_Bcast( &nverts, 1, MPI_INT, 0, MPI_COMM_WORLD );
 
@@ -128,8 +129,9 @@ int main( int argc, char * argv[] ) {
   MPI_Scatter( buf_envio, tam_buf_recep, MPI_PACKED, buf_recep, bsize2d,
                MPI_INT, 0, MPI_COMM_WORLD );
 
-  for( int i = 0; i < tam*tam; i++ )
-    cout << "P"<<rank<<"["<<i<<"]="<<buf_recep[i]<<endl;
+  // Comprobación de la distribución -> OK
+  // for( int i = 0; i < tam*tam; i++ )
+  //   cout << "P"<<rank<<"["<<i<<"]="<<buf_recep[i]<<endl;
 
   //////////////////////////////////////////////////////////
   //                                                      //
@@ -155,12 +157,12 @@ int main( int argc, char * argv[] ) {
   MPI_Comm_rank( comm_horizontal, &rank_horizontal );
   MPI_Comm_rank( comm_vertical, &rank_vertical );
 
-  // Comprobación de los comunicadores
-  if( rank == 0 )
-    cout << endl << endl;
-
-  cout << "Soy el Proceso " << rank << ", en el comunicador horizontal soy el " <<
-          rank_horizontal << "º, y en el vertical, el " << rank_vertical << "º" << endl;
+  // Comprobación de los comunicadores -> OK
+  // if( rank == 0 )
+  //   cout << endl << endl;
+  //
+  // cout << "Soy el Proceso " << rank << ", en el comunicador horizontal soy el " <<
+  //         rank_horizontal << "º, y en el vertical, el " << rank_vertical << "º" << endl;
 
   //////////////////////////////////////////////////////////
   //                                                      //
@@ -174,13 +176,18 @@ int main( int argc, char * argv[] ) {
   const int local_i_end   = tam;
 
   // Y el i global de cada proceso
-  const int global_i_start = rank * bsize1d;
+  const int global_i_start = ( rank / raiz_P ) * tam;
+  const int global_i_end   = global_i_start + tam;
+
+  // Y el j global de cada proceso
+  const int global_j_start = ( rank % raiz_P ) * tam;
+  const int global_j_end   = global_j_start + tam;
 
   // Vectores para almacenar las filas y columnas k
-  //int *fila_k    = new int[nverts];
-  //int *columna_k = new int[nverts];
-  int fila_k[tam];
-  int columna_k[nverts];
+  int *fila_k    = new int[nverts];
+  int *columna_k = new int[nverts];
+  //int fila_k[tam];
+  //int columna_k[nverts];
   int *fila_tmp, *columna_tmp;
 
   // Sincronizamos las hebras y tomamos la medida de tiempo inicial
@@ -189,43 +196,49 @@ int main( int argc, char * argv[] ) {
 
   // Bucle principal del algoritmo
   for( int k = 0; k < nverts; k++ ) {
+    MPI_Barrier( MPI_COMM_WORLD );
 
     // Calculamos la fila y la columna k
     int row_k_process = k / tam;
-    int col_k_process = k % tam;
+    int col_k_process = row_k_process;
 
     // Si este proceso contiene parte de la fila k
-    if( rank == row_k_process ) {
+    if( global_i_start <= k && k < global_i_end ) {
       const int local_k = k % tam;
       fila_tmp = fila_k;
-      //fila_k = &( buf_recep[local_k * nverts] );
-      for( int i = 0; i < tam; i++ ) {
-        int local_index = i * 1 + local_k;
-        fila_k[i] = buf_recep[local_index];
-      }
+      fila_k = &( buf_recep[local_k * tam] );
+      // for( int i = 0; i < tam; i++ )
+      //   cout << "P"<<rank<<"F"<<k<<"["<<i<<"]="<<fila_k[i]<<endl;
+      // for( int i = 0; i < tam; i++ ) {
+      //   int local_index = i * 1 + local_k;
+      //   fila_k[i] = buf_recep[local_index];
+      // }
     }
-
+    if( rank == 0 )
+      cout << "B2" << endl;
     // Broadcast de la fila k, donde cada parámetro indica:
     //    - fila_k            -> buffer de entrada y salida
     //    - tam               -> número de elementos que se envían
     //    - MPI_INT           -> tipo de dato que se envía
     //    - rok_k_process     -> identificador del comunicador que envía
     //    - comm_horizontal   -> comunicador por el que se envía
-    MPI_Bcast( fila_k, tam, MPI_INT, row_k_process, comm_horizontal );
+    MPI_Bcast( fila_k, tam, MPI_INT, row_k_process, comm_vertical );
 
     // Si este proceso contiene parte de la columna k
-    if( rank == col_k_process ) {
-      const int local_k = k % tam;
+    if( global_j_start <= k && k < global_j_end ) {
+      int local_k = k % tam;
       columna_tmp = columna_k;
 
       for( int i = 0; i < tam; i++ ) {
-        int local_index = i * local_k;
-        columna_k[i] = buf_recep[local_index];
+        columna_k[i] = buf_recep[local_k];
+        local_k += tam;
+        // cout << "P"<<rank<<"C"<<k<<"["<<i<<"]="<<columna_k[i]<<endl;
       }
     }
-
+    if( rank == 0 )
+      cout << "B3" << endl;
     // Broadcast de la columna k
-    MPI_Bcast( columna_k, tam, MPI_INT, col_k_process, comm_vertical );
+    MPI_Bcast( columna_k, tam, MPI_INT, col_k_process, comm_horizontal );
 
     // Actualizamos la submatriz de cada proceso
     for( int i = local_i_start; i < local_i_end; i++ ) {
