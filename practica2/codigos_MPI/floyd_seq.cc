@@ -3,7 +3,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include "Graph.h"
-#include "mpi.h" 
+#include "mpi.h"
 
 using namespace std;
 
@@ -15,7 +15,7 @@ int main (int argc, char *argv[]) {
 		cerr << "Sintaxis: " << argv[0] << " <archivo de grafo>" << endl;
 		return(-1);
 	}
-	
+
 
 	Graph G;
 	G.lee(argv[1]);// Read the Graph
@@ -46,16 +46,17 @@ int main (int argc, char *argv[]) {
 			for(int ij = in; ij < in+nverts; ij++)
 	                      {
 		                int j=ij-in;
-	       			if (i!=j && i!=k && j!=k){		
+	       			if (i!=j && i!=k && j!=k){
 			 	    A[ij] = min(A[ik] + A[kn+j], A[ij]);
 				}
-				 
+
 	       }
 	   }
 	}
 
   double t2 = MPI_Wtime() - t1;
-  G.imprime();
-  cout << "Tiempo gastado= " << t2 << endl << endl;
+  //G.imprime();
+  //cout << "Tiempo gastado= " << t2 << endl << endl;
+	cout << nverts << " " << t2 << endl;
 
 }

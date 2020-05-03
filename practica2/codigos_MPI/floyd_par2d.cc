@@ -51,8 +51,7 @@ int main( int argc, char * argv[] ) {
     G.imprime();
 
   }
-  if( rank == 0 )
-    cout << "B1" << endl;
+
   // Se realiza un Broadcast del tamaño de la matriz grande
   MPI_Bcast( &nverts, 1, MPI_INT, 0, MPI_COMM_WORLD );
 
@@ -214,8 +213,7 @@ int main( int argc, char * argv[] ) {
       //   fila_k[i] = buf_recep[local_index];
       // }
     }
-    if( rank == 0 )
-      cout << "B2" << endl;
+
     // Broadcast de la fila k, donde cada parámetro indica:
     //    - fila_k            -> buffer de entrada y salida
     //    - tam               -> número de elementos que se envían
@@ -235,8 +233,7 @@ int main( int argc, char * argv[] ) {
         // cout << "P"<<rank<<"C"<<k<<"["<<i<<"]="<<columna_k[i]<<endl;
       }
     }
-    if( rank == 0 )
-      cout << "B3" << endl;
+
     // Broadcast de la columna k
     MPI_Bcast( columna_k, tam, MPI_INT, col_k_process, comm_horizontal );
 
@@ -261,10 +258,6 @@ int main( int argc, char * argv[] ) {
 
   }
 
-  // Sincronizamos las hebras y tomamos la medida de tiempo final
-  MPI_Barrier( MPI_COMM_WORLD );
-  double tfin = MPI_Wtime();
-
   //////////////////////////////////////////////////////////
   //                                                      //
   //    FASE 4                                            //
@@ -283,6 +276,10 @@ int main( int argc, char * argv[] ) {
   //    - MPI_COMM_WORLD  -> comunicador por el que se envían los datos
   MPI_Gather( buf_recep, bsize2d, MPI_INT, buf_envio, tam_buf_recep,
               MPI_PACKED, 0, MPI_COMM_WORLD );
+
+  // Sincronizamos las hebras y tomamos la medida de tiempo final
+  MPI_Barrier( MPI_COMM_WORLD );
+  double tfin = MPI_Wtime();
 
   if( rank == 0 ) {
 
@@ -321,8 +318,12 @@ int main( int argc, char * argv[] ) {
         if( num == INF ) cout << "INF ";  // Para que el resultado salga con la
         else cout << num << " ";          // misma sintaxis que la matriz inicial,
       }                                   // mostramos 1000000 como INF
+
       cout << endl;
+
     }
+
+    cout << endl << "Tiempo gastado: " << tfin - tini << " segundos." << endl << endl;
 
   }
 

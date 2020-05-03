@@ -29,8 +29,7 @@ int main (int argc, char *argv[]) {
 	if(rank==0)
             {G.lee(argv[1]);
              nverts = G.vertices;
-             G.imprime();
-             cout << endl << endl;
+             //G.imprime();
             }
         // Broadcast the number of vertices to all processes
         MPI_Bcast(&nverts,1,MPI_INT, 0, MPI_COMM_WORLD);
@@ -44,8 +43,6 @@ int main (int argc, char *argv[]) {
 	//Process 0 scatters blocks of matrix A
 	int * local_A= new int[bsize2d];
 	MPI_Scatter(A,bsize2d,MPI_INT,local_A,bsize2d,MPI_INT, 0, MPI_COMM_WORLD);
-
-
 
 
 
@@ -82,8 +79,6 @@ int main (int argc, char *argv[]) {
                      if (global_i!=j && global_i!=k && j!=k)
                        { int local_ij=i_nverts + j;
                          int suma_ikj=local_A[local_ik] + fila_k[j];
-                         //cout << "P" << rank << "[" << global_i << "," << j << "]="
-                          //    << local_A[local_ij] << endl;
 		         local_A[local_ij] = min(local_A[local_ij],suma_ikj);
                        }
             }
@@ -94,8 +89,11 @@ int main (int argc, char *argv[]) {
 
   MPI_Gather(local_A,bsize2d,MPI_INT,A,bsize2d,MPI_INT, 0, MPI_COMM_WORLD);
   double t2 = MPI_Wtime() - t1;
-  if (rank==0) {G.imprime();
-                cout << "Tiempo gastado= " << t2 << endl << endl;}
+  if (rank==0) {
+    //G.imprime();
+    //cout << "Tiempo gastado= " << t2 << endl << endl;
+    cout << nverts << " " << t2 << endl;
+  }
 
   MPI_Finalize();
 
