@@ -47,8 +47,8 @@ int main( int argc, char * argv[] ) {
     nverts = G.vertices;
 
     // Imprimimos la matriz inicial
-    cout << "Grafo de entrada:" << endl;
-    G.imprime();
+    //cout << "Grafo de entrada:" << endl;
+    //G.imprime();
 
   }
 
@@ -187,7 +187,7 @@ int main( int argc, char * argv[] ) {
   int *columna_k = new int[nverts];
   //int fila_k[tam];
   //int columna_k[nverts];
-  int *fila_tmp, *columna_tmp;
+  int *fila_tmp;
 
   // Sincronizamos las hebras y tomamos la medida de tiempo inicial
   MPI_Barrier( MPI_COMM_WORLD );
@@ -225,7 +225,7 @@ int main( int argc, char * argv[] ) {
     // Si este proceso contiene parte de la columna k
     if( global_j_start <= k && k < global_j_end ) {
       int local_k = k % tam;
-      columna_tmp = columna_k;
+      //columna_tmp = columna_k;
 
       for( int i = 0; i < tam; i++ ) {
         columna_k[i] = buf_recep[local_k];
@@ -256,7 +256,14 @@ int main( int argc, char * argv[] ) {
 
     }
 
+    if( global_i_start <= k && k < global_i_end )
+      fila_k = fila_tmp;
+
   }
+
+  // Sincronizamos las hebras y tomamos la medida de tiempo final
+  MPI_Barrier( MPI_COMM_WORLD );
+  double tfin = MPI_Wtime();
 
   //////////////////////////////////////////////////////////
   //                                                      //
@@ -276,10 +283,6 @@ int main( int argc, char * argv[] ) {
   //    - MPI_COMM_WORLD  -> comunicador por el que se envían los datos
   MPI_Gather( buf_recep, bsize2d, MPI_INT, buf_envio, tam_buf_recep,
               MPI_PACKED, 0, MPI_COMM_WORLD );
-
-  // Sincronizamos las hebras y tomamos la medida de tiempo final
-  MPI_Barrier( MPI_COMM_WORLD );
-  double tfin = MPI_Wtime();
 
   if( rank == 0 ) {
 
@@ -308,22 +311,23 @@ int main( int argc, char * argv[] ) {
     }
 
     // Mostramos el grafo resultado para hacer las comprobaciones
-    cout << endl << endl << "Grafo de salida:" << endl;
+    //cout << endl << endl << "Grafo de salida:" << endl;
 
-    for( int i = 0; i < nverts; i++ ) {
-      cout << "A[" << i << ",*]= ";
-      for( int j = 0; j < nverts; j++ ) {
-        int num = B[i * nverts + j];
+    // for( int i = 0; i < nverts; i++ ) {
+    //   cout << "A[" << i << ",*]= ";
+    //   for( int j = 0; j < nverts; j++ ) {
+    //     int num = B[i * nverts + j];
+    //
+    //     if( num == INF ) cout << "INF ";  // Para que el resultado salga con la
+    //     else cout << num << " ";          // misma sintaxis que la matriz inicial,
+    //   }                                   // mostramos 1000000 como INF
+    //
+    //   cout << endl;
+    //
+    // }
 
-        if( num == INF ) cout << "INF ";  // Para que el resultado salga con la
-        else cout << num << " ";          // misma sintaxis que la matriz inicial,
-      }                                   // mostramos 1000000 como INF
-
-      cout << endl;
-
-    }
-
-    cout << endl << "Tiempo gastado: " << tfin - tini << " segundos." << endl << endl;
+    //cout << endl << "Tiempo gastado: " << tfin - tini << " segundos." << endl << endl;
+    cout << nverts << " " << tfin - tini << endl;
 
   }
 
