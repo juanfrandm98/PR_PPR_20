@@ -45,6 +45,115 @@ bool pendiente_retorno_cs;	// Indica si el proceso est� esperando a recibir la
 /* ****************** Funciones para el Branch-Bound  ********************* */
 /* ********************************************************************* */
 
+void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
+
+  //////////////////////////////////////////////////////////////////////////////
+  //                                                                          //
+  //                        PARTE PEDIGÜEÑA                                   //
+  //                                                                          //
+  //////////////////////////////////////////////////////////////////////////////
+
+  if ( pila.vacia() ) {
+
+    int siguiente = ( id + 1 ) % size;
+    int anterior = ( id - 1 ) % size;
+
+    // Enviamos un mensaje de petición al proceso siguiente
+    MPI_Send( &id, 1, MPI_INT, siguiente, PETICION, MPI_COMM_WORLD );
+
+    while( pila.vacia() && activo ) {
+
+      MPI_Status status;
+
+      // Esperamos un mensaje de otro proceso
+      // MPI_Probe comprueba si hau mensajes pendientes de ser recibidos, pero
+      // sin llegar a recibirlos.
+      MPI_Probe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
+      int tipo = status.MPI_TAG;
+
+      switch( tipo ) {
+        case PETICION:    // Petición de trabajo
+
+          int solicitante;
+
+          MPI_Recv( &solicitante, 1, MPI_INT, anterior, PETICION,
+                    MPI_COMM_WORLD, &status );
+
+          MPI_Send( &solicitante, 1, MPI_INT, siguiente, PETICION,
+                    MPI_COMM_WORLD );
+
+          /* Futuro mecanismo de detección de fin
+          if( solicitante == id ) {
+
+          }*/
+
+          break;
+        case NODOS:
+
+          // Obtenemos el número de elementos que recibimos
+          int tamanio;
+          MPI_Get_count( &status, MPI_INT, &tamanio );
+
+          MPI_Recv( pila(0), tamanio, MPI_INT, status.MPI_SOURCE,
+                    MPI_COMM_WORLD );
+
+          break;
+      }
+
+    }
+
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  //                                                                          //
+  //                        PARTE SOLIDARIA                                   //
+  //                                                                          //
+  //////////////////////////////////////////////////////////////////////////////
+
+  if( activo ) {
+
+    MPI_Status status;
+    int flag;
+
+    // Sondeamos si hay mensajes pendientes de otros procesos
+    // Usamos MPI_IProbe para hacerlo de manera no bloqueante.
+    MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
+
+    while( flag > 0 ) {   // Atendemos peticiones mientras haya mensajes
+
+      int solicitante;
+      int anterior = ( id - 1 ) % size;
+
+      // Recibimos el mensaje de petición de trabajo
+      MPI_Recv( &solicitante, 1, MPI_INT, anterior, PETICION, MPI_COMM_WORLD,
+                &status );
+
+      if( pila.tamanio() > 1 ) {  // Si hay suficientes nodos en la pila para ceder
+                                  // (al menos 2 para que pueda dividirla)
+        // Dividimos la pila local para mandar una mitad
+        tPila mitad;
+        pila.divide( mitad );
+
+        // Enviamos los nodos al proceso solicitante
+        MPI_Send( pila.nodos, pila.tope, MPI_INT, solicitante, NODOS, MPI_COMM_WORLD );
+
+      } else {    // Si no hay suficientes nodos en la pila para ceder
+
+        int siguiente = ( id + 1 ) % size;
+        // Reenviamos la petición al siguiente proceso
+        MPI_Send( &solicitante, 1, MPI_INT, siguiente, PETICION, MPI_COMM_WORLD );
+
+      }
+
+      // Volvemos a sondear si hay mensajes pendientes
+      MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
+
+    }
+
+  }
+
+}
+
 void LeerMatriz (char archivo[], int** tsp) {
   FILE *fp;
   int i, j, r;
@@ -314,7 +423,7 @@ bool tPila::push (tNodo& nodo) {
 	if (llena())
 		return false;
 
-	// Copiar el nodo en el tope de la pila	
+	// Copiar el nodo en el tope de la pila
 	for(int i = 0; i < 2 * NCIUDADES; i++)
 		nodos[tope + i] = nodo.datos[i];
 
@@ -326,7 +435,7 @@ bool tPila::push (tNodo& nodo) {
 bool tPila::pop (tNodo& nodo) {
 	if (vacia())
 		return false;
-	
+
 	// Modificar el tope de la pila
 	tope -= 2 * NCIUDADES;
 
@@ -375,6 +484,7 @@ void tPila::acotar (int U) {
 }
 
 
+
 /* ******************************************************************** */
 //         Funciones de reserva dinamica de memoria
 /* ******************************************************************** */
@@ -395,4 +505,3 @@ void liberarMatriz(int** m) {
 	delete [] m[0];
 	delete [] m;
 }
-
