@@ -55,6 +55,8 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
 
   if ( pila.vacia() ) {
 
+    //printf( "Proceso #%d entra en fase PEDIGÜEÑA\n", id);
+
     int siguiente = ( id + 1 ) % size;
     int anterior = ( id - 1 ) % size;
 
@@ -64,6 +66,8 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
     while( pila.vacia() && activo ) {
 
       MPI_Status status;
+
+      //printf( "Proceso #%d espera mensaje\n", id);
 
       // Esperamos un mensaje de otro proceso
       // MPI_Probe comprueba si hau mensajes pendientes de ser recibidos, pero
@@ -79,28 +83,37 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
           MPI_Recv( &solicitante, 1, MPI_INT, anterior, PETICION,
                     MPI_COMM_WORLD, &status );
 
+          //printf( "Proceso #%d recibe mensaje PETICION\n", id);
+
           MPI_Send( &solicitante, 1, MPI_INT, siguiente, PETICION,
                     MPI_COMM_WORLD );
 
-          /* Futuro mecanismo de detección de fin
           if( solicitante == id ) {
-
-          }*/
+            //printf( "Proceso #%d recibe mensaje propio\n", id);
+          }
 
           break;
         case NODOS:
+
+          //printf( "Proceso #%d recibe mensaje NODOS\n", id);
 
           // Obtenemos el número de elementos que recibimos
           int tamanio;
           MPI_Get_count( &status, MPI_INT, &tamanio );
 
-          MPI_Recv( pila(0), tamanio, MPI_INT, status.MPI_SOURCE,
-                    MPI_COMM_WORLD );
+          MPI_Recv( pila.nodos, tamanio, MPI_INT, status.MPI_SOURCE,
+                    NODOS, MPI_COMM_WORLD, &status );
+          pila.tope = tamanio;
 
+          break;
+        default:
+          //printf( "Proceso #%d ha recibido un mensaje no contemplado\n", id);
           break;
       }
 
     }
+
+    //printf( "Proceso #%d ya no espera mensaje\n", id);
 
   }
 
@@ -112,6 +125,8 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
 
   if( activo ) {
 
+    //printf( "Proceso #%d entra en fase SOLIDARIA\n", id);
+
     MPI_Status status;
     int flag;
 
@@ -120,6 +135,8 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
     MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
 
     while( flag > 0 ) {   // Atendemos peticiones mientras haya mensajes
+
+      //printf( "Proceso #%d ha recibido mensaje\n", id);
 
       int solicitante;
       int anterior = ( id - 1 ) % size;
@@ -149,6 +166,8 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
       MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
 
     }
+
+    //printf( "Proceso #%d no recibe más mensajes\n", id);
 
   }
 

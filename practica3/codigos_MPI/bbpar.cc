@@ -36,7 +36,7 @@ int main( int argc, char **argv ) {
         rnodo,    // Hijo derecho
         solucion; // Mejor solución
 
-  bool activo,    // Condición de fin
+  bool activo = true,    // Condición de fin
        nueva_U;   // Hay nuevo valor de c.s.
 
   int U;          // Valor de c.s.
@@ -49,51 +49,65 @@ int main( int argc, char **argv ) {
 
   if( id == 0 ) {
     LeerMatriz( argv[2], tsp0 );    // Leemos la matriz del fichero de entrada
+    if( activo )
+      pila.pop( nodo );
   }
 
   // Hacemos un Broadcast de la matriz, pues para que todos los procesos
   // funcionen bien necesitan conocer toda la matriz
   MPI_Bcast( &tsp0[0][0], NCIUDADES * NCIUDADES, MPI_INT, 0, MPI_COMM_WORLD );
 
-  if( id != 0 ) {
-    Equilibrado_Carga( pila, activo, id, size );
-  }
-
   MPI_Barrier( MPI_COMM_WORLD );
   double tinit = MPI::Wtime();
 
+  if( id != 0 ) {
+    Equilibrado_Carga( pila, activo, id, size );
+    if( activo )
+      pila.pop( nodo );
+  }
+
+  activo = !Inconsistente(tsp0);
+
   while( activo ) {     // CICLO DEL BRANCH&BOUND
+
+    //cout << "Proceso #" << id << " - it #" << iteraciones << endl;
 
     Ramifica( &nodo, &lnodo, &rnodo, tsp0 );
     nueva_U = false;
 
-    if( Solucion( &rnodo ) )
+    if( Solucion( &rnodo ) ) {
       if( rnodo.ci() < U ) {
         U = rnodo.ci();        // Actualiza c.s.
         nueva_U = true;
         CopiaNodo( &rnodo, &solucion );
       }
-    else
-      if( rnodo.ci() < U )
+    } else {
+      if( rnodo.ci() < U ) {
         if( !pila.push( rnodo ) ) {
           printf( "Error: pila agotada\n" );
           liberarMatriz( tsp0 );
           exit(1);
         }
-
-    if( Solucion( &lnodo ) )
-      if( lnodo.ci() < U ) {
-        U = lnodo.ci();        // Actualiza c.s.
-        nueva_U = true;
-        CopiaNodo( &lnodo, &solucion );
       }
-    else
-      if( lnodo.ci() < U )
+    }
+
+    if( Solucion( &lnodo ) ) {
+      if( lnodo.ci() < U ) {
+        if( !pila.push( lnodo ) ) {
+          U = lnodo.ci();        // Actualiza c.s.
+          nueva_U = true;
+          CopiaNodo( &lnodo, &solucion );
+        }
+      }
+    } else {
+      if( lnodo.ci() < U ) {
         if( !pila.push( lnodo ) ) {
           printf( "Error: pila agotada\n" );
           liberarMatriz( tsp0 );
           exit(1);
         }
+      }
+    }
 
     //Difusion_Cota_Superior( &U );
 
@@ -107,6 +121,9 @@ int main( int argc, char **argv ) {
 
     iteraciones++;
 
+    cout << "Solución #" << iteraciones << " de Proceso #" << id << ":";
+    EscribeNodo( &solucion );
+
   }
 
   MPI_Barrier( MPI_COMM_WORLD );
@@ -117,9 +134,10 @@ int main( int argc, char **argv ) {
 
   MPI_Barrier( MPI_COMM_WORLD );
 
+  printf( "Solución: \n" );
+  EscribeNodo( &solucion );
+
   if( id == 0 ) {
-    printf( "Solución: \n" );
-    EscribeNodo( &solucion );
     cout << "Tiempo gastado = " << tfin - tinit  << endl;
   }
 

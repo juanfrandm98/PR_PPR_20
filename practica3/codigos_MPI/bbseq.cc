@@ -40,7 +40,7 @@ main (int argc, char **argv) {
 	activo = !Inconsistente(tsp0);
         double t=MPI::Wtime();
 	while (activo) {       // ciclo del Branch&Bound
-		Ramifica (&nodo, &lnodo, &rnodo, tsp0);		
+		Ramifica (&nodo, &lnodo, &rnodo, tsp0);
 		nueva_U = false;
 		if (Solucion(&rnodo)) {
 			if (rnodo.ci() < U) {    // se ha encontrado una solucion mejor
@@ -77,6 +77,8 @@ main (int argc, char **argv) {
 		if (nueva_U) pila.acotar(U);
 		activo = pila.pop(nodo);
 		iteraciones++;
+    cout << "Solucion #" << iteraciones << ":";
+    EscribeNodo(&solucion);
 	}
         t=MPI::Wtime()-t;
         MPI::Finalize();
@@ -86,5 +88,3 @@ main (int argc, char **argv) {
 	cout << "Numero de iteraciones = " << iteraciones << endl << endl;
 	liberarMatriz(tsp0);
 }
-
-
