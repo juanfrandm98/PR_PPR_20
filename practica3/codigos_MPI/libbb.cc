@@ -7,6 +7,7 @@
 #include <mpi.h>
 #include "libbb.h"
 using namespace MPI;
+using namespace std;
 extern unsigned int NCIUDADES;
 
 // Tipos de mensajes que se env�an los procesos
@@ -45,7 +46,7 @@ bool pendiente_retorno_cs;	// Indica si el proceso est� esperando a recibir la
 /* ****************** Funciones para el Branch-Bound  ********************* */
 /* ********************************************************************* */
 
-void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
+void Equilibrado_Carga( tPila & pila, bool & activo, int id ) {
 
   //////////////////////////////////////////////////////////////////////////////
   //                                                                          //
@@ -55,10 +56,8 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
 
   if ( pila.vacia() ) {
 
-    //printf( "Proceso #%d entra en fase PEDIGÜEÑA\n", id);
-
-    int siguiente = ( id + 1 ) % size;
-    int anterior = ( id - 1 ) % size;
+    siguiente = ( id + 1 ) % size;
+    anterior = ( id - 1 ) % size;
 
     // Enviamos un mensaje de petición al proceso siguiente
     MPI_Send( &id, 1, MPI_INT, siguiente, PETICION, MPI_COMM_WORLD );
@@ -67,13 +66,15 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
 
       MPI_Status status;
 
-      //printf( "Proceso #%d espera mensaje\n", id);
+      //printf( "Proceso #%d: espero mensaje\n", id);
 
       // Esperamos un mensaje de otro proceso
       // MPI_Probe comprueba si hau mensajes pendientes de ser recibidos, pero
       // sin llegar a recibirlos.
       MPI_Probe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
       int tipo = status.MPI_TAG;
+
+      //cout << "Proceso #" << id << ": (PED) recibo " << tipo << endl;
 
       switch( tipo ) {
         case PETICION:    // Petición de trabajo
@@ -125,8 +126,6 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
 
   if( activo ) {
 
-    //printf( "Proceso #%d entra en fase SOLIDARIA\n", id);
-
     MPI_Status status;
     int flag;
 
@@ -136,10 +135,8 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
 
     while( flag > 0 ) {   // Atendemos peticiones mientras haya mensajes
 
-      //printf( "Proceso #%d ha recibido mensaje\n", id);
-
       int solicitante;
-      int anterior = ( id - 1 ) % size;
+      anterior = ( id - 1 ) % size;
 
       // Recibimos el mensaje de petición de trabajo
       MPI_Recv( &solicitante, 1, MPI_INT, anterior, PETICION, MPI_COMM_WORLD,
@@ -152,11 +149,11 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
         pila.divide( mitad );
 
         // Enviamos los nodos al proceso solicitante
-        MPI_Send( pila.nodos, pila.tope, MPI_INT, solicitante, NODOS, MPI_COMM_WORLD );
+        MPI_Send( mitad.nodos, mitad.tope, MPI_INT, solicitante, NODOS, MPI_COMM_WORLD );
 
       } else {    // Si no hay suficientes nodos en la pila para ceder
 
-        int siguiente = ( id + 1 ) % size;
+        siguiente = ( id + 1 ) % size;
         // Reenviamos la petición al siguiente proceso
         MPI_Send( &solicitante, 1, MPI_INT, siguiente, PETICION, MPI_COMM_WORLD );
 
@@ -166,8 +163,6 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size ) {
       MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
 
     }
-
-    //printf( "Proceso #%d no recibe más mensajes\n", id);
 
   }
 

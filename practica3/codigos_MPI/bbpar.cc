@@ -57,16 +57,16 @@ int main( int argc, char **argv ) {
   // funcionen bien necesitan conocer toda la matriz
   MPI_Bcast( &tsp0[0][0], NCIUDADES * NCIUDADES, MPI_INT, 0, MPI_COMM_WORLD );
 
+  activo = !Inconsistente(tsp0);
+
   MPI_Barrier( MPI_COMM_WORLD );
   double tinit = MPI::Wtime();
 
   if( id != 0 ) {
-    Equilibrado_Carga( pila, activo, id, size );
+    Equilibrado_Carga( pila, activo, id );
     if( activo )
       pila.pop( nodo );
   }
-
-  activo = !Inconsistente(tsp0);
 
   while( activo ) {     // CICLO DEL BRANCH&BOUND
 
@@ -84,7 +84,6 @@ int main( int argc, char **argv ) {
     } else {
       if( rnodo.ci() < U ) {
         if( !pila.push( rnodo ) ) {
-          printf( "Error: pila agotada\n" );
           liberarMatriz( tsp0 );
           exit(1);
         }
@@ -93,16 +92,13 @@ int main( int argc, char **argv ) {
 
     if( Solucion( &lnodo ) ) {
       if( lnodo.ci() < U ) {
-        if( !pila.push( lnodo ) ) {
-          U = lnodo.ci();        // Actualiza c.s.
-          nueva_U = true;
-          CopiaNodo( &lnodo, &solucion );
-        }
+        U = lnodo.ci();        // Actualiza c.s.
+        nueva_U = true;
+        CopiaNodo( &lnodo, &solucion );
       }
     } else {
       if( lnodo.ci() < U ) {
         if( !pila.push( lnodo ) ) {
-          printf( "Error: pila agotada\n" );
           liberarMatriz( tsp0 );
           exit(1);
         }
@@ -114,15 +110,14 @@ int main( int argc, char **argv ) {
     if( nueva_U )
       pila.acotar(U);
 
-    Equilibrado_Carga( pila, activo, id, size );
+    Equilibrado_Carga( pila, activo, id );
 
     if( activo )
       pila.pop( nodo );
 
     iteraciones++;
 
-    cout << "Solución #" << iteraciones << " de Proceso #" << id << ":";
-    EscribeNodo( &solucion );
+    cout << "Proceso " << id << "\tIteración " << iteraciones << "\tSolución " << solucion.ci() << endl;
 
   }
 

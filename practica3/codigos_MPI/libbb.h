@@ -111,7 +111,7 @@ class tPila{
 /* *** Cabeceras de funciones para el algoritmo de Branch-and-Bound *** */
 /* ********************************************************************* */
 
-void Equilibrado_Carga( tPila & pila, bool & activo, int id, int size );
+void Equilibrado_Carga( tPila & pila, bool & activo, int id );
 	/* Función que realiza el equilibrado de carga entre procesos */
 
 void LeerMatriz (char archivo[], int** tsp) ;
