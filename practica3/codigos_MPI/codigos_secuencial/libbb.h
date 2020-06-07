@@ -31,15 +31,15 @@ struct tArco {
 #ifndef TNODO_T
 #define TNODO_T
 class tNodo {
-
+	
 public:
 	int* datos;
 
-
+		
 		tNodo() {
 			datos = new int[2 * NCIUDADES];
 		}
-
+		
 		int ci(){
 			return datos[0];
 		}
@@ -58,8 +58,8 @@ public:
 		~tNodo() {
 			delete [] datos;
 		}
-
-
+	
+		
 };
 #endif
 
@@ -72,8 +72,8 @@ class tPila{
 		int tope;
 		int* nodos;
 
-
-
+		
+			
 		tPila(){
 			tope = 0;
 			nodos = new int[2 * NCIUDADES * MAXPILA];
@@ -110,9 +110,6 @@ class tPila{
 /* ********************************************************************* */
 /* *** Cabeceras de funciones para el algoritmo de Branch-and-Bound *** */
 /* ********************************************************************* */
-
-void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo solucion );
-	/* Función que realiza el equilibrado de carga entre procesos */
 
 void LeerMatriz (char archivo[], int** tsp) ;
 
@@ -207,8 +204,10 @@ void CopiaNodo (tNodo *origen, tNodo *destino);
 void EscribeNodo (tNodo *nodo);
   /* Escribe en pantalla el contenido de la descripcion de trabajo nodo */
 
+
 /* ******************************************************************** */
 // Funciones para reserva dinamica de memoria
 int ** reservarMatrizCuadrada(unsigned int orden);
 void liberarMatriz(int** m);
 /* ******************************************************************** */
+

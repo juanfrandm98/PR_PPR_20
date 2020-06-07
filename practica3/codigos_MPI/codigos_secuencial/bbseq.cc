@@ -77,8 +77,8 @@ main (int argc, char **argv) {
 		if (nueva_U) pila.acotar(U);
 		activo = pila.pop(nodo);
 		iteraciones++;
-    cout << "Solucion #" << iteraciones << ":";
-    EscribeNodo(&solucion);
+    //cout << "Solucion #" << iteraciones << ":";
+    //EscribeNodo(&solucion);
 	}
         t=MPI::Wtime()-t;
         MPI::Finalize();

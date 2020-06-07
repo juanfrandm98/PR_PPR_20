@@ -1,19 +1,25 @@
+CPAR=./codigos_paralelo
+CSEQ=./codigos_secuencial
+
 all: bbseq bbpar
 
-bbpar: bbpar.o libbb.o
-	mpicxx -O3 bbpar.o libbb.o -o bbpar
+bbpar: ${CPAR}/bbpar.o ${CPAR}/libbb.o
+	mpicxx -O3 ${CPAR}/bbpar.o ${CPAR}/libbb.o -o bbpar
 
-bbseq: bbseq.o libbb.o
-	mpicxx -O3 bbseq.o libbb.o -o bbseq
+bbseq: ${CSEQ}/bbseq.o ${CSEQ}/libbb.o
+	mpicxx -O3 ${CSEQ}/bbseq.o ${CSEQ}/libbb.o -o bbseq
 
-bbpar.o: bbpar.cc
-	mpicxx -O3 -c bbpar.cc
+${CPAR}/bbpar.o: ${CPAR}/bbpar.cc
+	mpicxx -O3 -c ${CPAR}/bbpar.cc -o ${CPAR}/bbpar.o
 
-bbseq.o: bbseq.cc
-	mpicxx -O3 -c bbseq.cc
+${CSEQ}/bbseq.o: ${CSEQ}/bbseq.cc
+	mpicxx -O3 -c ${CSEQ}/bbseq.cc -o ${CSEQ}/bbseq.o
 
-libbb.o: libbb.cc libbb.h
-	mpicxx -O3 -c  libbb.cc
+${CPAR}/libbb.o: ${CPAR}/libbb.cc ${CPAR}/libbb.h
+	mpicxx -O3 -c  ${CPAR}/libbb.cc -o ${CPAR}/libbb.o
+
+${CSEQ}/libbb.o: ${CSEQ}/libbb.cc ${CSEQ}/libbb.h
+	mpicxx -O3 -c  ${CSEQ}/libbb.cc -o ${CSEQ}/libbb.o
 
 
 clean:

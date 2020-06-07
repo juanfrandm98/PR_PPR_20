@@ -81,96 +81,84 @@ int main( int argc, char **argv ) {
   while( activo ) {     // CICLO DEL BRANCH&BOUND
 
     //cout << "Proceso #" << id << " - it #" << iteraciones << endl;
+    //cout << "Proceso #" << id << ": inicio nueva iteración con " << pila.tamanio() << " en pila" << endl;
 
     Ramifica( &nodo, &lnodo, &rnodo, tsp0 );
     nueva_U = false;
 
-    cout << "Proceso #" << id << ": nodo->" << nodo.ci() << "; rnodo->" << rnodo.ci() << "; lnodo->" << lnodo.ci() << endl;
+    //cout << "Proceso #" << id << ": nodo a expandir de valor " << nodo.ci() << endl;
+    //cout << "Proceso #" << id << ": rnodo.ci()=" << rnodo.ci() << "\tSolucion(&rnodo)=" << Solucion( &rnodo ) << endl;
+    //cout << "Proceso #" << id << ": lnodo.ci()=" << lnodo.ci() << "\tSolucion(&lnodo)=" << Solucion( &lnodo ) << endl;
 
-    cout << "Proceso #" << id << ": trabajo con rnodo" << endl;
     if( Solucion( &rnodo ) ) {
-      cout << "Proceso #" << id << ": rnodo es solución" << endl;
+      //cout << "Proceso #" << id << ": rnodo es solución - U=" << U << ", rnodo.ci=" << rnodo.ci() << endl;
       if( rnodo.ci() < U ) {
-        cout << "Proceso #" << id << ": rnodo se añade a solución" << endl;
+        //cout << "Proceso #" << id << ": modifico solución" << endl;
         U = rnodo.ci();        // Actualiza c.s.
         nueva_U = true;
         CopiaNodo( &rnodo, &solucion );
-      } else {
-        cout << "Proceso #" << id << ": rnodo NO se añade a solución" << endl;
       }
     } else {
-      cout << "Proceso #" << id << ": rnodo NO es solución" << endl;
+      //cout << "Proceso #" << id << ": rnodo no es solución, rnodo.ci()=" << rnodo.ci() << ", U=" << U << endl;
       if( rnodo.ci() < U ) {
-        cout << "Proceso #" << id << ": rnodo se añade a la pila" << endl;
+        //cout << "Proceso #" << id << ": añado rnodo a la pila, su tamaño será " << pila.tamanio() + 1 << endl;
         if( !pila.push( rnodo ) ) {
 					printf ("Error: pila agotada\n");
           liberarMatriz( tsp0 );
           exit(1);
         }
-      } else {
-        cout << "Proceso #" << id << ": rnodo NO se añade a la pila (ci=" << rnodo.ci() << ", U=" << U << ")" << endl;
       }
     }
 
-    cout << "Proceso #" << id << ": trabajo con lnodo" << endl;
     if( Solucion( &lnodo ) ) {
-      cout << "Proceso #" << id << ": lnodo es solución" << endl;
+      //cout << "Proceso #" << id << ": lnodo es solución - U=" << U << ", lnodo.ci=" << lnodo.ci() << endl;
       if( lnodo.ci() < U ) {
-        cout << "Proceso #" << id << ": lnodo se añade a solución" << endl;
+        //cout << "Proceso #" << id << ": modifico solución" << endl;
         U = lnodo.ci();        // Actualiza c.s.
         nueva_U = true;
         CopiaNodo( &lnodo, &solucion );
-      } else {
-        cout << "Proceso #" << id << ": lnodo NO se añade a solución" << endl;
       }
     } else {
-      cout << "Proceso #" << id << ": lnodo NO es solución" << endl;
+      //cout << "Proceso #" << id << ": lnodo no es solución, lnodo.ci()=" << lnodo.ci() << ", U=" << U << endl;
       if( lnodo.ci() < U ) {
-        cout << "Proceso #" << id << ": lnodo se añade a la pila" << endl;
+        //cout << "Proceso #" << id << ": añado lnodo a la pila, su tamaño será " << pila.tamanio() + 1 << endl;
         if( !pila.push( lnodo ) ) {
 					printf ("Error: pila agotada\n");
           liberarMatriz( tsp0 );
           exit(1);
         }
-      } else {
-        cout << "Proceso #" << id << ": lnodo NO se añade a la pila (ci=" << lnodo.ci() << ", U=" << U << ")" << endl;
       }
     }
 
+    //cout << "Proceso #" << id << ": iteración terminada - tamaño de la pila: " << pila.tamanio() << endl;
+
     //Difusion_Cota_Superior( &U );
 
-    if( nueva_U ) {
+    if( nueva_U )
       pila.acotar(U);
-      cout << "Proceso #" << id << ": he acotado mi pila con " << U << endl;
-    }
 
     Equilibrado_Carga( pila, activo, id, solucion );
 
-    if( activo ) {
-      cout << "Proceso #" << id << ": voy a hacer pop (mi pila tiene " << pila.tamanio() << " nodos)" << endl;
+    if( activo )
       pila.pop( nodo );
-      cout << "Proceso #" << id << ": he hecho pop (mi pila tiene " << pila.tamanio() << " nodos)" << endl;
-    }
 
     iteraciones++;
 
-    cout << "Proceso " << id << "\tIteración " << iteraciones << "\tSolución " << solucion.ci() << endl;
+    //cout << "Proceso #" << id << ": en mi " << iteraciones << "º iteración, mi cota es: " << U << endl;
 
   }
 
   MPI_Barrier( MPI_COMM_WORLD );
   double tfin = MPI::Wtime();
 
-  cout << "Proceso #" << id << " - número de iteraciones = " << iteraciones
-       << endl << endl;
+  cout << "Proceso #" << id << " - número de iteraciones = " << iteraciones << endl;
 
   MPI_Barrier( MPI_COMM_WORLD );
 
-  printf( "Solución: \n" );
-  EscribeNodo( &solucion );
-
   if( id == 0 ) {
-    cout << "Tiempo gastado = " << tfin - tinit  << endl;
+    cout << endl << endl << "Solución: " << endl;
+    EscribeNodo( &solucion );
+    cout << "Tiempo gastado = " << tfin - tinit  << endl << endl;
   }
 
   MPI_Finalize();
