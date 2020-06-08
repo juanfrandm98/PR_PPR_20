@@ -145,6 +145,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
 
 
                 tNodo solucion_recibida;
+                InicNodo( &solucion_recibida );
 
                 MPI_Recv( solucion_recibida.datos, 2*NCIUDADES, MPI_INT, anterior,
                           FIN, comunicadorCarga, &status );
@@ -173,6 +174,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
         case FIN:
 
           tNodo solucion_recibida;
+          InicNodo( &solucion_recibida );
 
           MPI_Recv( solucion_recibida.datos, 2*NCIUDADES, MPI_INT, anterior, FIN,
                     comunicadorCarga, &status );
