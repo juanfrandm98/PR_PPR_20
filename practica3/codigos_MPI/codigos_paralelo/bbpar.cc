@@ -16,6 +16,8 @@ int id, size;
 bool token_presente;
 int estado;
 int color;
+MPI_Comm comunicadorCarga;
+MPI_Comm comunicadorCota;
 
 int main( int argc, char **argv ) {
 
@@ -60,6 +62,10 @@ int main( int argc, char **argv ) {
   // Hacemos un Broadcast de la matriz, pues para que todos los procesos
   // funcionen bien necesitan conocer toda la matriz
   MPI_Bcast( &tsp0[0][0], NCIUDADES * NCIUDADES, MPI_INT, 0, MPI_COMM_WORLD );
+
+  // Creamos los comunicadores
+  MPI_Comm_split( MPI_COMM_WORLD, 0, id, &comunicadorCarga );
+  MPI_Comm_split( MPI_COMM_WORLD, 1, id, &comunicadorCota );
 
   // El proceso 0 es el que comienza teniendo el token
   if( id == 0 )

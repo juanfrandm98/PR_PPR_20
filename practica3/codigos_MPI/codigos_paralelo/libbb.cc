@@ -26,8 +26,8 @@ const int NEGRO = 1;
 
 
 // Comunicadores que usar� cada proceso
-Intracomm comunicadorCarga;	// Para la distribuci�n de la carga
-Intracomm comunicadorCota;	// Para la difusi�n de una nueva cota superior detectada
+extern MPI_Comm comunicadorCarga;	// Para la distribuci�n de la carga
+extern MPI_Comm comunicadorCota;	// Para la difusi�n de una nueva cota superior detectada
 
 // Variables que indican el estado de cada proceso
 extern int rank;	 // Identificador del proceso dentro de cada comunicador (coincide en ambos)
@@ -60,7 +60,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
   if ( pila.vacia() ) {
 
     // Enviamos un mensaje de petición al proceso siguiente
-    MPI_Send( &id, 1, MPI_INT, siguiente, PETICION, MPI_COMM_WORLD );
+    MPI_Send( &id, 1, MPI_INT, siguiente, PETICION, comunicadorCarga );
 
     while( pila.vacia() && activo ) {
       MPI_Status status;
@@ -70,7 +70,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
       // Esperamos un mensaje de otro proceso
       // MPI_Probe comprueba si hau mensajes pendientes de ser recibidos, pero
       // sin llegar a recibirlos.
-      MPI_Probe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
+      MPI_Probe( MPI_ANY_SOURCE, MPI_ANY_TAG, comunicadorCarga, &status );
       int tipo = status.MPI_TAG;
 
       //cout << "Proceso #" << id << ": (PED) recibo " << tipo << endl;
@@ -80,11 +80,11 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
           int solicitante;
 
           MPI_Recv( &solicitante, 1, MPI_INT, anterior, PETICION,
-                    MPI_COMM_WORLD, &status );
+                    comunicadorCarga, &status );
           //printf( "Proceso #%d recibe mensaje PETICION\n", id);
 
           MPI_Send( &solicitante, 1, MPI_INT, siguiente, PETICION,
-                    MPI_COMM_WORLD );
+                    comunicadorCarga );
 
           // Si el mensaje de petición enviado por un proceso se le es devuelto,
           // pasa al estado pasivo
@@ -99,7 +99,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
                 color_token = NEGRO;
 
               MPI_Send( &color_token, 1, MPI_INT, anterior, TOKEN,
-                        MPI_COMM_WORLD );
+                        comunicadorCarga );
 
               color = BLANCO;
               token_presente = false;
@@ -116,7 +116,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
           MPI_Get_count( &status, MPI_INT, &tamanio );
 
           MPI_Recv( pila.nodos, tamanio, MPI_INT, status.MPI_SOURCE,
-                    NODOS, MPI_COMM_WORLD, &status );
+                    NODOS, comunicadorCarga, &status );
           pila.tope = tamanio;
 
           // El proceso vuelve a tener nodos, por lo que pasa al estado activo
@@ -126,7 +126,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
         case TOKEN:
 
             MPI_Recv( &color_token, 1, MPI_INT, siguiente, TOKEN,
-                      MPI_COMM_WORLD, &status );
+                      comunicadorCarga, &status );
 
             //cout << "Proceso #" << id << ": recibe token de color " << color_token << endl;
 
@@ -139,7 +139,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
                 activo = false;
 
                 MPI_Send( solucion.datos, 2*NCIUDADES, MPI_INT, siguiente, FIN,
-                          MPI_COMM_WORLD );
+                          comunicadorCarga );
 
                 //cout << "Proceso #" << id << ": he mandado mensaje de FIN, mi estado es " << estado << " y mi pila tiene " << pila.tamanio() << endl;
 
@@ -147,7 +147,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
                 tNodo solucion_recibida;
 
                 MPI_Recv( solucion_recibida.datos, 2*NCIUDADES, MPI_INT, anterior,
-                          FIN, MPI_COMM_WORLD, &status );
+                          FIN, comunicadorCarga, &status );
 
                 if( solucion_recibida.ci() < solucion.ci() )
                   CopiaNodo( &solucion_recibida, &solucion );
@@ -160,7 +160,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
                   color_token = NEGRO;
 
                 MPI_Send( &color_token, 1, MPI_INT, anterior, TOKEN,
-                          MPI_COMM_WORLD );
+                          comunicadorCarga );
 
                 color = BLANCO;
                 token_presente = false;
@@ -175,7 +175,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
           tNodo solucion_recibida;
 
           MPI_Recv( solucion_recibida.datos, 2*NCIUDADES, MPI_INT, anterior, FIN,
-                    MPI_COMM_WORLD, &status );
+                    comunicadorCarga, &status );
 
           //cout << "Proceso #" << id << ": he recibido mensaje de FIN, mi estado es " << estado << " y mi pila tiene " << pila.tamanio() << endl;
 
@@ -183,7 +183,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
             CopiaNodo( &solucion_recibida, &solucion );
 
           MPI_Send( solucion.datos, 2*NCIUDADES, MPI_INT, siguiente, FIN,
-                    MPI_COMM_WORLD );
+                    comunicadorCarga );
 
           activo = false;
 
@@ -209,7 +209,7 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
 
     // Sondeamos si hay mensajes pendientes de otros procesos
     // Usamos MPI_IProbe para hacerlo de manera no bloqueante.
-    MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
+    MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, comunicadorCarga, &flag, &status );
 
     while( flag > 0 ) {   // Atendemos peticiones mientras haya mensajes
 
@@ -221,8 +221,8 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
         case PETICION:
 
           // Recibimos el mensaje de petición de trabajo
-          MPI_Recv( &solicitante, 1, MPI_INT, anterior, PETICION, MPI_COMM_WORLD,
-                    &status );
+          MPI_Recv( &solicitante, 1, MPI_INT, anterior, PETICION,
+                    comunicadorCarga, &status );
 
           if( pila.tamanio() > 1 ) {  // Si hay suficientes nodos en la pila para ceder
                                       // (al menos 2 para que pueda dividirla)
@@ -233,21 +233,23 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
             //cout << "Proceso #" << id << ": DIVIDO MI PILA" << endl;
 
             // Enviamos los nodos al proceso solicitante
-            MPI_Send( mitad.nodos, mitad.tope, MPI_INT, solicitante, NODOS, MPI_COMM_WORLD );
+            MPI_Send( mitad.nodos, mitad.tope, MPI_INT, solicitante, NODOS,
+                      comunicadorCarga );
 
           } else {    // Si no hay suficientes nodos en la pila para ceder
 
             siguiente = ( id + 1 ) % size;
             // Reenviamos la petición al siguiente proceso
-            MPI_Send( &solicitante, 1, MPI_INT, siguiente, PETICION, MPI_COMM_WORLD );
+            MPI_Send( &solicitante, 1, MPI_INT, siguiente, PETICION,
+                      comunicadorCarga );
 
           }
 
           break;
         case TOKEN:
 
-          MPI_Recv( &color_token, 1, MPI_INT, siguiente, TOKEN, MPI_COMM_WORLD,
-                    &status );
+          MPI_Recv( &color_token, 1, MPI_INT, siguiente, TOKEN,
+                    comunicadorCarga, &status );
 
           token_presente = true;
           //cout << "Proceso #" << id << ": recibe token de color " << color_token << endl;
@@ -256,7 +258,8 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
       }
 
       // Volvemos a sondear si hay mensajes pendientes
-      MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
+      MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, comunicadorCarga, &flag,
+                  &status );
 
     }
 
