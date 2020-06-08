@@ -114,6 +114,9 @@ class tPila{
 void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion );
 	/* Función que realiza el equilibrado de carga entre procesos */
 
+void Difusion_Cota_Superior( int id, int & cota, bool & nueva_cota );
+	/* Función que realiza la difusión de la cota superior entre los procesos */
+
 void LeerMatriz (char archivo[], int** tsp) ;
 
 bool Inconsistente  (int** tsp);

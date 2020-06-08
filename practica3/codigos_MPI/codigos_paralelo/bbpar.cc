@@ -18,6 +18,7 @@ int estado;
 int color;
 MPI_Comm comunicadorCarga;
 MPI_Comm comunicadorCota;
+bool pendiente_retorno_cs;
 
 int main( int argc, char **argv ) {
 
@@ -25,12 +26,23 @@ int main( int argc, char **argv ) {
   MPI_Comm_size( MPI_COMM_WORLD, &size );
   MPI_Comm_rank( MPI_COMM_WORLD, &id );
 
+  bool ejecucion_con_difusion;
+  int eleccion;
+
   switch( argc ) {
-    case 3:
+    case 4:
       NCIUDADES = atoi( argv[1] );
+      eleccion = atoi( argv[3] );
+
+      if( eleccion == 0 )
+        ejecucion_con_difusion = true;
+      else
+        ejecucion_con_difusion = false;
+
       break;
     default:
-      cerr << "La sintaxis es: " << argv[0] << " <tamaño> <archivo>" << endl;
+      cerr << "La sintaxis es: " << argv[0] << " <tamaño> <archivo> "
+           << "<difusion(0 - sí, 1 - no)>" << endl;
       exit(1);
       break;
   }
@@ -53,11 +65,16 @@ int main( int argc, char **argv ) {
   estado = 0;     // Inicialmente, los procesos están en estado activo
   color = 0;      // Inicialmente, los procesos son de color blanco
 
+  // Variable añadida para la difusión de cota
+  pendiente_retorno_cs = false;
+
   U = INFINITO;       // Inicializamos la cuta superior a un valor muy grande
   InicNodo( &nodo );  // Inizializamos la estructura nodo
 
-  if( id == 0 )
+  if( id == 0 ) {
     LeerMatriz( argv[2], tsp0 );    // Leemos la matriz del fichero de entrada
+    cout << endl;
+  }
 
   // Hacemos un Broadcast de la matriz, pues para que todos los procesos
   // funcionen bien necesitan conocer toda la matriz
@@ -138,7 +155,8 @@ int main( int argc, char **argv ) {
 
     //cout << "Proceso #" << id << ": iteración terminada - tamaño de la pila: " << pila.tamanio() << endl;
 
-    //Difusion_Cota_Superior( &U );
+    if( ejecucion_con_difusion )
+      Difusion_Cota_Superior( id, U, nueva_U );
 
     if( nueva_U )
       pila.acotar(U);
@@ -162,7 +180,7 @@ int main( int argc, char **argv ) {
   MPI_Barrier( MPI_COMM_WORLD );
 
   if( id == 0 ) {
-    cout << endl << endl << "Solución: " << endl;
+    cout << endl << "Solución: " << endl;
     EscribeNodo( &solucion );
     cout << "Tiempo gastado = " << tfin - tinit  << endl << endl;
   }

@@ -39,7 +39,7 @@ extern bool token_presente;  // Indica si el proceso posee el token
 int anterior;	// Identificador del anterior proceso
 int siguiente;	// Identificador del siguiente proceso
 bool difundir_cs_local;	// Indica si el proceso puede difundir su cota inferior local
-bool pendiente_retorno_cs;	// Indica si el proceso est� esperando a recibir la cota inferior de otro proceso
+extern bool pendiente_retorno_cs;	// Indica si el proceso est� esperando a recibir la cota inferior de otro proceso
 
 
 /* ********************************************************************* */
@@ -262,6 +262,62 @@ void Equilibrado_Carga( tPila & pila, bool & activo, int id, tNodo & solucion ) 
                   &status );
 
     }
+
+  }
+
+}
+
+void Difusion_Cota_Superior( int id, int & cota, bool & nueva_cota ) {
+
+  siguiente = ( id + 1 ) % size;
+  anterior = ( id - 1 + size ) % size;
+  difundir_cs_local = nueva_cota;
+
+  // Un proceso puede mandar su nueva cota si la ha generado y si ya ha recibido
+  // la última cota que mandó (para no estar mandando mensajes todo el rato)
+  if( difundir_cs_local && !pendiente_retorno_cs ) {
+
+    MPI_Send( &cota, 1, MPI_INT, siguiente, id, comunicadorCota );
+    pendiente_retorno_cs = true;
+    difundir_cs_local = false;
+
+  }
+
+  int recibido, emisor, cota_recibida;
+  MPI_Status status;
+
+  MPI_Iprobe( anterior, MPI_ANY_TAG, comunicadorCota, &recibido, &status );
+
+  while( recibido > 0 ) {
+
+    emisor = status.MPI_TAG;
+
+    MPI_Recv( &cota_recibida, 1, MPI_INT, anterior, emisor, comunicadorCota,
+              &status );
+
+    if( cota_recibida < cota ) {
+      cota = cota_recibida;
+      nueva_cota = true;
+    }
+
+    if( id != emisor ) {
+      // Si la cota no fue originalmente enviada por este proceso, la reenvía
+      MPI_Send( &cota, 1, MPI_INT, siguiente, emisor, comunicadorCota );
+    } else {
+
+      if( difundir_cs_local ) {
+
+        MPI_Send( &cota, 1, MPI_INT, siguiente, id, comunicadorCota );
+        pendiente_retorno_cs = true;
+        difundir_cs_local = false;
+
+      } else {
+        pendiente_retorno_cs = false;
+      }
+
+    }
+
+    MPI_Iprobe( anterior, MPI_ANY_TAG, comunicadorCota, &recibido, &status );
 
   }
 
